@@ -2,6 +2,7 @@
 uniform vec2 u_resolution;
 uniform vec2 u_location;
 uniform float u_time;
+uniform vec3 u_color;
 uniform float x;
 uniform float y;
 out vec4 FragColor;
