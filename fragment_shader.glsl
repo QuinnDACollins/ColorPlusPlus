@@ -15,7 +15,11 @@ void main() {
 
   float width = map(0.16666666666, 0., 2., 0, u_resolution.x);
   float height = map(.25, 0., 2., 0, u_resolution.y);
-  float dist = distance(vec2(u_location.x + (width/2), u_location.y + (height/2)), gl_FragCoord.xy);
-  dist = map(dist, 0., abs(sin(u_time * .25) * 75), 1., 0.);
-  FragColor = vec4(vec3(dist), 1.0);
+
+
+  float pct = distance(vec2(u_location.x + (width/2), u_location.y + (height/2)), gl_FragCoord.xy);
+  if (pct >= abs(sin(u_time * .25) * 60))
+    { discard; } 
+  pct = map(pct, 0., abs(sin(u_time * .25) * 75), 1., 0.);
+  FragColor = vec4(vec3(pct), 1.0);
 }
