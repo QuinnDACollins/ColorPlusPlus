@@ -1,5 +1,6 @@
 // Note.h
 #include <string>
+#include <vector>
 #ifndef Note_H
 #define Note_H
 
@@ -7,9 +8,11 @@ class Note
 {
 
 public:
-  std::string note;
-  std::string strScale[7];
-  Note(std::string note, std::string strScale[7]);
+  std::string noteName;
+  int degree;
+  int idx;
+  Note();
+  Note(std::string _noteName, int _degree, int _idx);
 
 
 };

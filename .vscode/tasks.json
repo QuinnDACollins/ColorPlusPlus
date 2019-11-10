@@ -6,17 +6,27 @@
             "type": "shell",
             "command": "g++",
             "args": [
+                "-std=c++0x",
+                "-pthread",
                 "-g",
                 "-o",
                 "ColorPlus.exe",
+                "src/RtMidi.cpp",
+                "src/Binasc.cpp",
                 "src/Note.cpp",
+                "src/MidiFile.cpp",
+                "src/MidiEvent.cpp",
+                "src/MidiEventList.cpp",
+                "src/MidiMessage.cpp",
                 "src/glad.c",
                 "ColorPlus.cpp",
+                "-D__WINDOWS_MM__",
                 "-I",
                 "include",
                 "-lglfw3dll",
                 "-lopengl32",
-                "-lgdi32"
+                "-lgdi32",
+                "-lwinmm"
             ],
             "group": {
                 "kind": "build",

@@ -4,9 +4,12 @@
 #include <Note.h>
 
 
-Note::Note(std::string note, std::string strScale[7]){
+Note::Note(){}
     /* data */
-    note = note;
-    strScale =  strScale;
+
+Note::Note(std::string _noteName, int _degree, int _idx){
+    noteName = _noteName;
+    degree = _degree;
+    idx = _idx;
 }
 
