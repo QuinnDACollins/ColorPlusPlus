@@ -1,14 +1,15 @@
-#version 330 core
+#version 460 core
 uniform vec2 u_resolution;
-uniform vec2 u_location;
 uniform float u_time;
 uniform vec3 u_color;
 uniform vec2 u_mouse;
 uniform float u_size;
 uniform float x;
 uniform float y;
+uniform int idx;
+uniform float notes[108];
+uniform vec2 playing;
 out vec4 FragColor;
-in vec3 vertices;
 
 float map(float value, float istart, float istop, float ostart, float ostop) {
     return ostart + (ostop - ostart) * ((value - istart) / (istop - istart));
@@ -35,25 +36,21 @@ float random (vec2 st) {
 }
 
 void main() {
-
   vec2 st = gl_FragCoord.xy/u_resolution;
+  vec4 color = vec4(1., 1., 1., 0.);
+  if(notes[idx] == 1.0){
+    color = vec4(u_color, 0.0);
+  } else {
+    color = vec4(1., 1., 1., 0.);
+  }
   st.x *= 12;
   st.y *= 8;
   st = fract(st);
-  float pct = 0.0;
-  pct = distance(st,vec2(0.5));
-  vec3 color = vec3(pct);
-  
-  
-  if (pct >= 0.5){ 
-    vec2 st = gl_FragCoord.xy/u_resolution.xy;
-    st = st * 100;
-    st = fract(st);
-    st += abs(sin(u_time * random(vec2(45, 34)))) * .5;
-    vec3 color = vec3(1.0, 1.0, 1.0) - vec3(box(st, vec2(0.4), 0.01));
-   
-    FragColor = vec4(vec3(0.5), 1.0);
-  } else{
-    FragColor = vec4(vec3(pct), 1.0);
+  float pct = distance(st,vec2(0.5));
+  //pct += abs(sin(u_time * .05));
+  if(pct >= 0.5){
+    FragColor = (vec4(0., 0., 0., 0.5));
+  } else {
+    FragColor = (vec4(0., 0., 0., 1.0-pct) + color);
   }
 }

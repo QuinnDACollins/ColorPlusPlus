@@ -8,6 +8,7 @@
 #include <Note.h>
 #include <thread>
 #include <chrono>
+#include <algorithm>
 #include <glad/glad.h> 
 #include <KHR/khrplatform.h>
 #include <GLFW/glfw3.h>
@@ -46,8 +47,8 @@ const char *fragShaderSrc =
 const int w = 2400;
 const int h = 1600;
 string allNotes[12] {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
-std::vector<int> nowPlaying;
 std::vector<unsigned char> message;
+GLfloat nowPlaying[108] = {0.0};
 RtMidiOut *midiOut = new RtMidiOut();
 
 std::vector<Note> generate_scale(string note, string tonic, string quality){
@@ -101,7 +102,7 @@ std::map<int, pair<std::vector<unsigned char>, double>> handleMidi(){
     std::map<int, pair<std::vector<unsigned char>, double>> keyEvents;
     generate_scale("D", "C", "major");
     MidiFile song;
-    song.read("yoshi.mid");
+    song.read("battle-theme-3-.mid");
     
 
     song.joinTracks();
@@ -117,9 +118,29 @@ std::map<int, pair<std::vector<unsigned char>, double>> handleMidi(){
     return keyEvents;
 }
 
+    void messageToUniform(const std::vector<unsigned char> *message){
+        //Grab info from the message
+        int noteNum = message->at(1) % 12;
+        string noteName = allNotes[noteNum];
+        int octave = message->at(1) / 12;
+        int vel = message->at(2);
+        //Adjust our fatass boolean array with whether note is being pressed or not.
+
+        //if it is an ON message
+        if(vel > 0){
+            nowPlaying[noteNum * octave] = 1.0f;
+        } else {
+            nowPlaying[noteNum * octave] = 0.0f;
+        }
+        
+
+
+    }
+
 int main(){
     midiOut->openPort(0);
     int idxCounter = -1;
+    std::vector<std::vector<float>> teddy = {{1.0,1.0,0.72}, {1.0,1.0,0.82}, {0.72,1.0,0.75}, {0.82,1.0,0.85}, {0.84,0.93,0.97},{0.28,0.43,0.74}, {0.28,0.43,0.74}, {0.73,0.66,0.89}, {1.0, 1.0, 1.0}, {1,0.8,0.95}, {1.0,1.0, 1.0}, {0.87,0.69,0.48}}; 
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -133,13 +154,15 @@ int main(){
     }
  
     glfwMakeContextCurrent(window);
-
+    
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
     std::cout << "Failed to initialize GLAD" << std::endl;
     return -1;
     }   
 
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);  
     auto start = chrono::steady_clock::now();
 
 
@@ -169,12 +192,11 @@ int main(){
 
 
 
-
     Shader ourShader("vertex_Shader.glsl", "fragment_shader.glsl");
 
     unsigned int VBO;
     unsigned int VAO[96];
-
+   
     glGenVertexArrays(96, VAO);
     glGenBuffers(1, &VBO);
     unsigned int EBO;
@@ -194,50 +216,53 @@ int main(){
         glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 3* sizeof(float), (void*)0);
         glEnableVertexAttribArray(0);
         }
-       
-    
-    
 
     int i = 0;
-    std::vector<double> played;
+    std::vector<int> played;
     std::map<int, pair<std::vector<unsigned char>, double>> keyEvents = handleMidi();
-
     while(!glfwWindowShouldClose(window)){
     auto end = chrono::steady_clock::now();
     processInput(window);
     //cout << glfwGetTime() << "\n";
     
-
-    glClearColor(0.2f, 0.6f, 0.2f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
     
-    ourShader.use();
+    glClearColor(0.0f, 0.f, 0.f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+     ourShader.use();
+     //Generate midi sounds
+    for (auto it = keyEvents.cbegin(); it != keyEvents.cend() /* not hoisted */; /* no increment */) {
+        auto elapsed = (double)chrono::duration_cast<chrono::milliseconds>(end - start).count();
+        if (count(played.begin(), played.end(), it->first)){
+            it = keyEvents.erase(it);
+        }else if(elapsed >= it->second.second){
+            midiOut->sendMessage(&it->second.first);
+            played.push_back(it->first);
+            messageToUniform(&it->second.first);
+            it++;
+        } else {
+            it++;
+        }
+            
+    }  
     for(int y = 0; y < 8; y++){
         for(int x = 0; x < 12; x++){
             glBindVertexArray(VAO[(x)*(y)]);
             glUniform1f(glGetUniformLocation(ourShader.ID, "x"), valMap(xyArr[y][x].first, 0, w, -1., 1.));
             glUniform1f(glGetUniformLocation(ourShader.ID, "y"), -(valMap(xyArr[y][x].second, 0, h, 1., -1.)));
+            glUniform1i(glGetUniformLocation(ourShader.ID, "idx"), (x + 1) * (y + 1) );
             glUniform2f(glGetUniformLocation(ourShader.ID, "u_location"), xyArr[y][x].first, xyArr[y][x].second);
             glUniform2f(glGetUniformLocation(ourShader.ID, "u_resolution"), w, h);
-            glUniform1f(glGetUniformLocation(ourShader.ID, "u_time"), sin(glfwGetTime())*50);
-            
+            glUniform1f(glGetUniformLocation(ourShader.ID, "u_time"), sin(glfwGetTime()));
+            glUniform1fv(glGetUniformLocation(ourShader.ID, "notes"),108,nowPlaying);
+            glUniform3f(glGetUniformLocation(ourShader.ID, "u_color"), teddy.at(x).at(0), teddy.at(x).at(1), teddy.at(x).at(2));
             double xPos, yPos;
             glfwGetCursorPos(window, &xPos, &yPos);
             glUniform2f(glGetUniformLocation(ourShader.ID, "u_mouse"), xPos, yPos);
-            //cout << map(0.1, -1.0, 1.0, 0.0, w/12) << "\n";
-           glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         }
     }
-
-    bool skipVal = false;
-    for (auto it = keyEvents.cbegin(); it != keyEvents.cend() /* not hoisted */; /* no increment */) {
-            auto elapsed = (double)chrono::duration_cast<chrono::milliseconds>(end - start).count();
-            if(elapsed - 10 <= it->second.second && it->second.second <= elapsed + 10){
-                cout << it->first << "\n";
-                midiOut->sendMessage(&it->second.first);
-            }
-            it++;
-        }          
+    
+        
     
     
     
